@@ -27,15 +27,12 @@ public class DomainUrlReader implements UrlReader {
 
     private UrlProvider urlProvider;
     private UrlFilter urlFilter;
-    private UrlFilter staticAssetFilter;
     private Set<String> visitedUrls;
     private Set<String> filteredOutUrls;
-    private Set<String> staticAssetUrls;
 
     private DomainUrlReader() {
         visitedUrls = new HashSet<>();
         filteredOutUrls = new HashSet<>();
-        staticAssetUrls = new HashSet<>();
     }
 
     public static DomainUrlReaderBuilder of() {
@@ -62,7 +59,6 @@ public class DomainUrlReader implements UrlReader {
                         .collect(Collectors.toSet());
                 handleValidUrls(newUrls);
                 handleFilteredOutUrls(newUrls);
-                handleStaticAssetUrls(newUrls);
                 urlLimitCounter++;
             } catch (IOException e) {
                 LOGGER.error("Error occurred while loading url: {}", nextUrl);
@@ -87,12 +83,6 @@ public class DomainUrlReader implements UrlReader {
                 .collect(Collectors.toSet()));
     }
 
-    private void handleStaticAssetUrls(Set<String> newUrls) {
-        staticAssetUrls.addAll(newUrls.stream()
-                .filter(staticAssetFilter::isValid)
-                .collect(Collectors.toSet()));
-    }
-
     private void validateResponse(Connection.Response response) {
         if (response.statusCode() != CORRECT_STATUS_CODE || !response.contentType().contains(VALID_CONTENT_TYPE)) {
             throw new DomainUrlReadException(String.format("Failed to read URL: %s", response.url()));
@@ -107,14 +97,9 @@ public class DomainUrlReader implements UrlReader {
         return visitedUrls;
     }
 
-    public Set<String> getStaticAssetUrls() {
-        return staticAssetUrls;
-    }
-
     public static class DomainUrlReaderBuilder {
         private UrlProvider urlProvider;
         private UrlFilter urlFilter;
-        private UrlFilter staticAssetFilter;
 
         private DomainUrlReaderBuilder() {
         }
@@ -129,17 +114,11 @@ public class DomainUrlReader implements UrlReader {
             return this;
         }
 
-        public DomainUrlReaderBuilder withStaticAssetFilter(UrlFilter staticAssetFilter) {
-            this.staticAssetFilter = staticAssetFilter;
-            return this;
-        }
-
         public DomainUrlReader build() {
             validateParameters();
             DomainUrlReader domainUrlReader = new DomainUrlReader();
             domainUrlReader.urlProvider = urlProvider;
             domainUrlReader.urlFilter = urlFilter;
-            domainUrlReader.staticAssetFilter = staticAssetFilter;
             return domainUrlReader;
         }
 
@@ -149,9 +128,6 @@ public class DomainUrlReader implements UrlReader {
             }
             if (urlFilter == null) {
                 throw new DomainUrlParameterNotDefinedException("urlFilter not defined for DomainUrlReader!");
-            }
-            if (staticAssetFilter == null) {
-                throw new DomainUrlParameterNotDefinedException("staticAssetFilter not defined for DomainUrlReader!");
             }
         }
     }

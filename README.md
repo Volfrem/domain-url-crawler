@@ -9,4 +9,5 @@ Possible improvements:
     2. Use lombok instead of custom builders
     3. Improve filtering of urls
     4. Write result into file
-    5. Move static asset filtering out of DomainUrlReader class
+    5. Add more tests
+    6. Wrap Jsoup and inject it into DomainUrlReader class. To make it easier to test and substitute.

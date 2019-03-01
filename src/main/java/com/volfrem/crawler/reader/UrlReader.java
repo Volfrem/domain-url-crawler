@@ -8,6 +8,4 @@ public interface UrlReader {
     Set<String> getFilteredOutUrls();
 
     Set<String> getVisitedUrls();
-
-    Set<String> getStaticAssetUrls();
 }
