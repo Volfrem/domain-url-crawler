@@ -1,14 +1,11 @@
 package com.volfrem.crawler.provider;
 
 import com.volfrem.crawler.exception.DomainUrlInvalidActionException;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import java.util.LinkedList;
 import java.util.List;
 
 public class QueueUrlProvider implements UrlProvider {
-    private static final Logger LOGGER = LoggerFactory.getLogger(QueueUrlProvider.class);
     private List<String> urlQueue;
 
     private QueueUrlProvider() {
@@ -38,7 +35,6 @@ public class QueueUrlProvider implements UrlProvider {
 
     @Override
     public void add(String url) {
-        LOGGER.info("Adding new url to the queue: {}", url);
         urlQueue.add(url);
     }
 

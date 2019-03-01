@@ -8,3 +8,5 @@ Possible improvements:
     1. Use Spring Boot
     2. Use lombok instead of custom builders
     3. Improve filtering of urls
+    4. Write result into file
+    5. Move static asset filtering out of DomainUrlReader class

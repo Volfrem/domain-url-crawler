@@ -27,8 +27,15 @@ public class DomainUrlReader implements UrlReader {
 
     private UrlProvider urlProvider;
     private UrlFilter urlFilter;
+    private UrlFilter staticAssetFilter;
+    private Set<String> visitedUrls;
+    private Set<String> filteredOutUrls;
+    private Set<String> staticAssetUrls;
 
     private DomainUrlReader() {
+        visitedUrls = new HashSet<>();
+        filteredOutUrls = new HashSet<>();
+        staticAssetUrls = new HashSet<>();
     }
 
     public static DomainUrlReaderBuilder of() {
@@ -36,8 +43,7 @@ public class DomainUrlReader implements UrlReader {
     }
 
     @Override
-    public Set<String> read() {
-        Set<String> visitedUrls = new HashSet<>();
+    public UrlReader read() {
         // Make sure there will be no infinite loop
         int urlLimitCounter = 0;
 
@@ -52,20 +58,39 @@ public class DomainUrlReader implements UrlReader {
                 Set<String> newUrls = documentUrlElements.stream()
                         .map(urlElement -> urlElement.absUrl("href"))
                                 // Urls are filtered to be sure url provider will not contain urls already visited
-                                // Also urls outside the domain are filtered out
-                        .filter(url -> !visitedUrls.contains(url) && urlFilter.isValid(url))
+                        .filter(url -> !visitedUrls.contains(url))
                         .collect(Collectors.toSet());
-
-                newUrls.forEach(urlProvider::add);
-                visitedUrls.addAll(newUrls);
+                handleValidUrls(newUrls);
+                handleFilteredOutUrls(newUrls);
+                handleStaticAssetUrls(newUrls);
                 urlLimitCounter++;
             } catch (IOException e) {
                 LOGGER.error("Error occurred while loading url: {}", nextUrl);
             }
         }
+        return this;
+    }
 
-        visitedUrls.forEach(linkElement -> LOGGER.info("Found link: {}", linkElement));
-        return visitedUrls;
+    private void handleValidUrls(Set<String> newUrls) {
+        Set<String> validUrls = newUrls.stream()
+                // Also urls outside the domain are filtered out
+                .filter(urlFilter::isValid)
+                .collect(Collectors.toSet());
+
+        validUrls.forEach(urlProvider::add);
+        visitedUrls.addAll(validUrls);
+    }
+
+    private void handleFilteredOutUrls(Set<String> newUrls) {
+        filteredOutUrls.addAll(newUrls.stream()
+                .filter(url -> !urlFilter.isValid(url))
+                .collect(Collectors.toSet()));
+    }
+
+    private void handleStaticAssetUrls(Set<String> newUrls) {
+        staticAssetUrls.addAll(newUrls.stream()
+                .filter(staticAssetFilter::isValid)
+                .collect(Collectors.toSet()));
     }
 
     private void validateResponse(Connection.Response response) {
@@ -74,9 +99,22 @@ public class DomainUrlReader implements UrlReader {
         }
     }
 
+    public Set<String> getFilteredOutUrls() {
+        return filteredOutUrls;
+    }
+
+    public Set<String> getVisitedUrls() {
+        return visitedUrls;
+    }
+
+    public Set<String> getStaticAssetUrls() {
+        return staticAssetUrls;
+    }
+
     public static class DomainUrlReaderBuilder {
         private UrlProvider urlProvider;
         private UrlFilter urlFilter;
+        private UrlFilter staticAssetFilter;
 
         private DomainUrlReaderBuilder() {
         }
@@ -91,11 +129,17 @@ public class DomainUrlReader implements UrlReader {
             return this;
         }
 
+        public DomainUrlReaderBuilder withStaticAssetFilter(UrlFilter staticAssetFilter) {
+            this.staticAssetFilter = staticAssetFilter;
+            return this;
+        }
+
         public DomainUrlReader build() {
             validateParameters();
             DomainUrlReader domainUrlReader = new DomainUrlReader();
             domainUrlReader.urlProvider = urlProvider;
             domainUrlReader.urlFilter = urlFilter;
+            domainUrlReader.staticAssetFilter = staticAssetFilter;
             return domainUrlReader;
         }
 
@@ -105,6 +149,9 @@ public class DomainUrlReader implements UrlReader {
             }
             if (urlFilter == null) {
                 throw new DomainUrlParameterNotDefinedException("urlFilter not defined for DomainUrlReader!");
+            }
+            if (staticAssetFilter == null) {
+                throw new DomainUrlParameterNotDefinedException("staticAssetFilter not defined for DomainUrlReader!");
             }
         }
     }
